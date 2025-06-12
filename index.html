@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UPSC Current Affairs Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; }
+    h1 { text-align: center; color: #333; }
+    .container { display: flex; flex-wrap: wrap; justify-content: space-around; }
+    .source { width: 30%; background: white; margin: 10px; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .source h2 { font-size: 1.2em; color: #0073e6; }
+    ul { list-style-type: none; padding-left: 0; }
+    li { margin: 8px 0; }
+    a { text-decoration: none; color: #333; }
+    a:hover { color: #0073e6; }
+  </style>
+</head>
+<body>
+
+  <h1>📚 UPSC Current Affairs Dashboard</h1>
+  <div class="container" id="news-container"></div>
+
+  <script>
+    const feeds = {
+      "Drishti IAS (English)": "https://www.drishtiias.com/rss.rss",
+      "Drishti IAS (Hindi)": "https://www.drishtiias.com/hindi/rss.rss",
+      "Insights IAS": "https://insightsonindia.com/feed",
+      "IAS Baba": "https://iasbaba.com/feed",
+      "KSG India": "https://www.ksgindia.com/feed",
+      "Next IAS": "https://www.nextias.com/feed",
+      "AffairsCloud": "https://affairscloud.com/feed",
+      "Deccan Chronicle": "https://www.deccanherald.com/rss",
+      "Education Sakshi": "https://education.sakshi.com/feed",
+      "India GS": "https://indiags.com/feed"
+    };
+
+    function fetchFeed(url, sourceName) {
+      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`;
+      return fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'ok' && data.items.length > 0) {
+            return {
+              source: sourceName,
+              items: data.items.map(item => ({
+                title: item.title,
+                link: item.link,
+                date: new Date(item.pubDate).toLocaleDateString()
+              }))
+            };
+          } else {
+            return { source: sourceName, items: [] };
+          }
+        })
+        .catch(() => ({ source: sourceName, items: [] }));
+    }
+
+    function displayNews(newsData) {
+      const container = document.getElementById('news-container');
+      newsData.forEach(news => {
+        const sourceDiv = document.createElement('div');
+        sourceDiv.classList.add('source');
+        sourceDiv.innerHTML = `<h2>${news.source}</h2>`;
+        if (news.items.length > 0) {
+          const ul = document.createElement('ul');
+          news.items.forEach(item => {
+            const li = document.createElement('li');
+            li.innerHTML = `<a href="${item.link}" target="_blank">${item.title}</a> <span style="font-size: 0.8em; color: #888;">(${item.date})</span>`;
+            ul.appendChild(li);
+          });
+          sourceDiv.appendChild(ul);
+        } else {
+          sourceDiv.innerHTML += `<p>No updates available.</p>`;
+        }
+        container.appendChild(sourceDiv);
+      });
+    }
+
+    function loadNews() {
+      const promises = Object.entries(feeds).map(([sourceName, url]) => fetchFeed(url, sourceName));
+      Promise.all(promises)
+        .then(results => displayNews(results))
+        .catch(error => console.error('Error fetching feeds:', error));
+    }
+
+    loadNews();
+    setInterval(loadNews, 10 * 60 * 1000); // Refresh every 10 minutes
+  </script>
+
+</body>
+</html>
