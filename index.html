@@ -1,88 +1,184 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UPSC Current Affairs Dashboard</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UPSC News Dashboard</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; }
-    h1 { text-align: center; color: #333; }
-    .container { display: flex; flex-wrap: wrap; justify-content: space-around; }
-    .source { width: 30%; background: white; margin: 10px; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .source h2 { font-size: 1.2em; color: #0073e6; }
-    ul { list-style-type: none; padding-left: 0; }
-    li { margin: 8px 0; }
-    a { text-decoration: none; color: #333; }
-    a:hover { color: #0073e6; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f9;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .search-bar {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+    .search-bar input {
+      width: 50%;
+      padding: 10px;
+      font-size: 1em;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    .dashboard {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+    }
+    .card {
+      background: #fff;
+      padding: 20px;
+      width: 300px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .card h2 {
+      font-size: 1.2em;
+      color: #0073e6;
+      margin-bottom: 15px;
+    }
+    .card ul {
+      list-style: none;
+      padding-left: 0;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .card ul li {
+      margin-bottom: 10px;
+      font-size: 0.95em;
+    }
+    .card ul li a {
+      text-decoration: none;
+      color: #333;
+    }
+    .card ul li a:hover {
+      color: #0073e6;
+    }
+    .date {
+      font-size: 0.8em;
+      color: #999;
+    }
   </style>
 </head>
 <body>
 
-  <h1>📚 UPSC Current Affairs Dashboard</h1>
-  <div class="container" id="news-container"></div>
+<h1>📚 UPSC Auto-Updated Dashboard</h1>
 
-  <script>
-    const feeds = {
-      "Drishti IAS (English)": "https://www.drishtiias.com/rss.rss",
-      "Drishti IAS (Hindi)": "https://www.drishtiias.com/hindi/rss.rss",
-      "Insights IAS": "https://insightsonindia.com/feed",
-      "IAS Baba": "https://iasbaba.com/feed",
-      "The Hindu": "https://www.thehindu.com/rssfeeds/",
-      "The Times of India": "https://timesofindia.indiatimes.com/rssfeeds/"
-    };
+<div class="search-bar">
+  <input type="text" id="searchInput" placeholder="Search topics across all sources..." />
+</div>
 
-    function fetchFeed(url, sourceName) {
-      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`;
-      return fetch(apiUrl)
-        .then(response => response.json())
-        .then(data => {
-          if (data.status === 'ok' && data.items.length > 0) {
-            return {
-              source: sourceName,
-              items: data.items.map(item => ({
-                title: item.title,
-                link: item.link,
-                date: new Date(item.pubDate).toLocaleDateString()
-              }))
-            };
-          } else {
-            return { source: sourceName, items: [] };
-          }
-        })
-        .catch(() => ({ source: sourceName, items: [] }));
-    }
+<div class="dashboard" id="dashboard"></div>
 
-    function displayNews(newsData) {
-      const container = document.getElementById('news-container');
-      newsData.forEach(news => {
-        const sourceDiv = document.createElement('div');
-        sourceDiv.classList.add('source');
-        sourceDiv.innerHTML = `<h2>${news.source}</h2>`;
-        if (news.items.length > 0) {
-          const ul = document.createElement('ul');
-          news.items.forEach(item => {
-            const li = document.createElement('li');
-            li.innerHTML = `<a href="${item.link}" target="_blank">${item.title}</a> <span style="font-size: 0.8em; color: #888;">(${item.date})</span>`;
-            ul.appendChild(li);
-          });
-          sourceDiv.appendChild(ul);
-        } else {
-          sourceDiv.innerHTML += `<p>No updates available.</p>`;
-        }
-        container.appendChild(sourceDiv);
+<script>
+  const feeds = {
+    "Drishti IAS (English)": "https://www.drishtiias.com/rss.rss",
+    "Drishti IAS (Hindi)": "https://www.drishtiias.com/hindi/rss.rss",
+    "InsightsIAS": "https://www.insightsonindia.com/feed/",
+    "IAS Baba": "https://iasbaba.com/feed/"
+  };
+
+  let allNewsItems = [];
+
+  function fetchRSS(feedName, feedUrl) {
+    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+    return fetch(apiUrl)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status !== "ok") throw new Error("Feed error");
+
+        return {
+          source: feedName,
+          items: data.items.map(item => ({
+            title: item.title,
+            link: item.link,
+            date: new Date(item.pubDate).toLocaleDateString(),
+            source: feedName
+          }))
+        };
+      })
+      .catch(() => ({
+        source: feedName,
+        items: []
+      }));
+  }
+
+  function displayNews(newsData) {
+    const dashboard = document.getElementById("dashboard");
+    dashboard.innerHTML = "";
+    allNewsItems = [];
+
+    newsData.forEach(feed => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `<h2>${feed.source}</h2>`;
+
+      const ul = document.createElement("ul");
+      feed.items.forEach(item => {
+        allNewsItems.push(item);
+        const li = document.createElement("li");
+        li.innerHTML = `<a href="${item.link}" target="_blank">${item.title}</a><div class="date">${item.date}</div>`;
+        ul.appendChild(li);
       });
-    }
 
-    function loadNews() {
-      const promises = Object.entries(feeds).map(([sourceName, url]) => fetchFeed(url, sourceName));
-      Promise.all(promises)
-        .then(results => displayNews(results))
-        .catch(error => console.error('Error fetching feeds:', error));
-    }
+      card.appendChild(ul);
+      dashboard.appendChild(card);
+    });
+  }
 
-    loadNews();
-    setInterval(loadNews, 10 * 60 * 1000); // Refresh every 10 minutes
-  </script>
+  function loadFeeds() {
+    const feedPromises = Object.entries(feeds).map(([name, url]) => fetchRSS(name, url));
+    Promise.all(feedPromises).then(displayNews);
+  }
+
+  function setupSearch() {
+    const searchInput = document.getElementById("searchInput");
+    searchInput.addEventListener("input", () => {
+      const term = searchInput.value.toLowerCase();
+      const dashboard = document.getElementById("dashboard");
+      dashboard.innerHTML = "";
+
+      const grouped = {};
+      allNewsItems.forEach(item => {
+        if (item.title.toLowerCase().includes(term)) {
+          if (!grouped[item.source]) grouped[item.source] = [];
+          grouped[item.source].push(item);
+        }
+      });
+
+      for (const [source, items] of Object.entries(grouped)) {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `<h2>${source}</h2>`;
+        const ul = document.createElement("ul");
+
+        items.forEach(item => {
+          const li = document.createElement("li");
+          li.innerHTML = `<a href="${item.link}" target="_blank">${item.title}</a><div class="date">${item.date}</div>`;
+          ul.appendChild(li);
+        });
+
+        card.appendChild(ul);
+        dashboard.appendChild(card);
+      }
+
+      if (term === "") loadFeeds(); // reload everything if search is cleared
+    });
+  }
+
+  loadFeeds();
+  setupSearch();
+  setInterval(loadFeeds, 10 * 60 * 1000); // Refresh every 10 minutes
+</script>
 
 </body>
 </html>
